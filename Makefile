@@ -1,9 +1,7 @@
 # executable is named same as current directory
 EXEC=pong
 SRCS=$(EXEC).asm
-LIB_STR_SRCS=
-LIB_STR_SRCS+=./lib/hex2decimal.asm
-#LIB_STR_SRCS=$(wildcard ./lib/*.asm)
+LIB_STR_SRCS=$(wildcard ./lib/*.asm)
 
 # Uncomment the below when testing against ./lib
 SRCS+=$(LIB_STR_SRCS)
