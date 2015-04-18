@@ -125,8 +125,8 @@ global _start
 _start:
   nop
 
-  mov   ecx, cleanup     ; ensure we get our cursor back
-  mov   ebx, SIGINT      ; no matter how we exit
+  mov   ecx, cleanup      ; ensure we get our cursor back
+  mov   ebx, SIGINT       ; no matter how we exit
   call  sys_signal
   mov   ebx, SIGTERM
   call  sys_signal
@@ -136,9 +136,18 @@ _start:
 %ifdef DRAW
   call  ansi_cursor_hide
   call  ansi_term_clear
+%else
+section .data
+  msg: db "Running in debug mode, please run: 'rm -f pong pong.o && PONG_DRAW=1 make && ./pong', in order to see the ball ;)", 10
+  .len equ $-msg
+section .text
+  mov   ecx, msg
+  mov   edx, msg.len
+  call  sys_write_stdout
 %endif
 
-  mov  byte [ ball_pos.x ], width / 2              ; initial ball position
+
+  mov  byte [ ball_pos.x ], width / 2               ; initial ball position
   mov  byte [ ball_pos.y ], height / 2
   mov  byte [ ball_speed.x ], 1                     ; initial ball speed
   mov  byte [ ball_speed.y ], 1
@@ -164,15 +173,15 @@ game_loop:
   mov   edx, space.len
   call  sys_write_stdout
 
-%endif
 
+%endif
   jmp   game_loop
 
 
 section .data
   ball: db "•"
   .len  equ $-ball
-%ifenv PONG_TRAIL                                   ; optionally follow the ball by a trail 
+%ifenv PONG_TRAIL   ; optionally follow the ball by a trail
   space: db '.'
 %else
   space: db ' '
