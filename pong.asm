@@ -4,6 +4,7 @@
 ; elaborate: http://ascii-table.com/ansi-escape-sequences-vt-100.php
 
 %include "./lib/signals.mac"
+%include "./lib/log.mac"
 
 extern ansi_cursor_hide
 extern ansi_cursor_position
@@ -48,12 +49,17 @@ idle:
 ; Determines which labels to jmp to next time ball's speed is applied to its position.
 ; Stores the appropriate function pointer in ball_dir.x and ball_dir.y respectively.
 ; This is then used to jmp in @see position_ball.
+section .data
+  hitleft: db "Hit left wall"
+    .len:  equ $- hitleft
+section .text
 adjust_direction:
   push  eax
   push  ebx
 
   xor   eax, eax          ; load current position
   mov   ax, [ ball_pos ]
+  log_reg eax
 
   mov   bx, ax
 
@@ -61,6 +67,7 @@ adjust_direction:
   cmp   al, 0
   jne   .hit_right_wall?
   mov   dword [ ball_dir.x ], position_ball.right ; hit left
+  log_debug hitleft, hitleft.len
   jmp   .hit_bottom_wall?
 
 .hit_right_wall?:                                 ; if we hit right wall fly to the left
@@ -179,6 +186,7 @@ game_loop:
 
 
 section .data
+  log_text
   ball: db "•"
   .len  equ $-ball
 %ifenv PONG_TRAIL   ; optionally follow the ball by a trail

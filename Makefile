@@ -21,15 +21,16 @@ DBGI=dwarf
 all: $(EXEC)
 
 deps:
-	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/ansi_cursor_hide.asm     > lib/ansi_cursor_hide.asm   
+	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/ansi_cursor_hide.asm     > lib/ansi_cursor_hide.asm
 	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/ansi_cursor_position.asm > lib/ansi_cursor_position.asm
-	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/ansi_cursor_show.asm     > lib/ansi_cursor_show.asm    
-	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/ansi_term_clear.asm      > lib/ansi_term_clear.asm     
-	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/hex2decimal.asm      		 > lib/hex2decimal.asm     
-	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_nanosleep.asm        > lib/sys_nanosleep.asm       
-	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_signal.asm           > lib/sys_signal.asm          
-	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_write_stdout.asm     > lib/sys_write_stdout.asm    
+	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/ansi_cursor_show.asm     > lib/ansi_cursor_show.asm
+	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/ansi_term_clear.asm      > lib/ansi_term_clear.asm
+	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/hex2decimal.asm          > lib/hex2decimal.asm
+	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_nanosleep.asm        > lib/sys_nanosleep.asm
+	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_signal.asm           > lib/sys_signal.asm
+	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_write_stdout.asm     > lib/sys_write_stdout.asm
 	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/signals.mac              > lib/signals.mac
+	curl -L curl -L https://raw.githubusercontent.com/thlorenz/log.mac/master/log.mac          > lib/log.mac
 
 gdb: clean $(EXEC)
 	gdb -- $(EXEC)
