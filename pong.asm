@@ -44,6 +44,7 @@ idle:
   call  sys_nanosleep
   pop   edx
   pop   ecx
+  ret
 
 
 ; Determines which labels to jmp to next time ball's speed is applied to its position.
@@ -52,6 +53,12 @@ idle:
 section .data
   hitleft: db "Hit left wall"
     .len:  equ $- hitleft
+  hitright: db "Hit right wall"
+    .len:  equ $- hitright
+  hittop: db "Hit top wall"
+    .len:  equ $- hittop
+  hitbottom: db "Hit bottom wall"
+    .len:  equ $- hitbottom
 section .text
 adjust_direction:
   push  eax
@@ -59,7 +66,6 @@ adjust_direction:
 
   xor   eax, eax          ; load current position
   mov   ax, [ ball_pos ]
-  log_reg eax
 
   mov   bx, ax
 
@@ -68,28 +74,40 @@ adjust_direction:
   jne   .hit_right_wall?
   mov   dword [ ball_dir.x ], position_ball.right ; hit left
   log_debug hitleft, hitleft.len
+  log_eax_dec
   jmp   .hit_bottom_wall?
 
 .hit_right_wall?:                                 ; if we hit right wall fly to the left
   cmp   bl, width
   jne   .hit_bottom_wall?
+  log_debug hitright, hitright.len
+  log_eax_dec
   mov   dword [ ball_dir.x ], position_ball.left  ; hit right
 
 .hit_bottom_wall?:                                ; if we hit bottom wall fly up
   cmp   ah, height
   jne   .hit_top_wall?
+  log_debug hitbottom, hitbottom.len
+  log_eax_dec
   mov   dword [ ball_dir.y ], position_ball.up    ; hit bottom
   jmp   .done
 
 .hit_top_wall?:                                   ; if we hit top wall fly down
   cmp   bh, 0
   jne   .done
+  log_debug hittop, hittop.len
+  log_eax_dec
   mov   dword [ ball_dir.y ], position_ball.down  ; hit top
 
 .done:
   pop ebx
   pop eax
   ret
+
+
+section .data
+  positioning: db "Positioning Ball",0
+section .text
 
 ; Applies ball speed vector (ball_speed) to its position (ball_pos).
 ; Either adds or substracts the magnitudes of the speed vector depending on
