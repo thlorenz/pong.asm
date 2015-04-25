@@ -62,18 +62,10 @@ section .data
 section .text
 
 section .data
-  top_left_corner_brick     : db '╔'
-    .len                      equ $-top_left_corner_brick
-  top_right_corner_brick    : db '╗'
-    .len                      equ $-top_right_corner_brick
-  bottom_right_corner_brick : db '╝'
-    .len                      equ $-bottom_right_corner_brick
-  bottom_left_corner_brick  : db '╚'
-    .len                      equ $-bottom_left_corner_brick
-  horizontal_brick          : db '═'
-    .len                      equ $-horizontal_brick
-  vertical_brick            : db '║'
-    .len                      equ $-vertical_brick
+  horizontal_top_brick   : db '▄'
+    .len                   equ $-horizontal_top_brick
+  horizontal_bottom_brick: db '▀'
+    .len                   equ $-horizontal_bottom_brick
 section .text
 draw_row_left_to_right:
   mov   edx, wall_ms * ms
@@ -81,8 +73,8 @@ draw_row_left_to_right:
 
   inc   ah
   call  ansi_cursor_position
-  mov   ecx, horizontal_brick
-  mov   edx, horizontal_brick.len
+  mov   ecx, horizontal_top_brick
+  mov   edx, horizontal_top_brick.len
   call  sys_write_stdout
 
   cmp   ah, right_x
@@ -95,78 +87,23 @@ draw_row_right_to_left:
 
   dec   ah
   call  ansi_cursor_position
-  mov   ecx, horizontal_brick
-  mov   edx, horizontal_brick.len
+  mov   ecx, horizontal_bottom_brick
+  mov   edx, horizontal_bottom_brick.len
   call  sys_write_stdout
 
   cmp   ah, left_x
   jne   draw_row_right_to_left
   ret
 
-draw_col_top_to_bottom:
-  mov   edx, wall_ms * ms
-  call  idle
-
-  inc   al
-  call  ansi_cursor_position
-  mov   ecx, vertical_brick
-  mov   edx, vertical_brick.len
-  call  sys_write_stdout
-
-  cmp   al, bottom_y
-  jne   draw_col_top_to_bottom
-  ret
-
-draw_col_bottom_to_top:
-  mov   edx, wall_ms * ms
-  call  idle
-
-  dec   al
-  call  ansi_cursor_position
-  mov   ecx, vertical_brick
-  mov   edx, vertical_brick.len
-  call  sys_write_stdout
-
-  cmp   al, top_y
-  jne   draw_col_bottom_to_top
-  ret
-
 draw_wall:                              ; draws wall with slight delay for that true arcade style ;)
   xor   eax, eax
-  mov   ah, left_x - 1                  ; start with top left corner
+  mov   ah, left_x - 1                 ; top row 
   mov   al, top_y - 1
-  call  ansi_cursor_position
-  mov   ecx, top_left_corner_brick
-  mov   edx, top_left_corner_brick.len
-  call  sys_write_stdout
+  call  draw_row_left_to_right         
 
-  call  draw_row_left_to_right         ; top row
+  mov   al, bottom_y + 1               ; bottom row
 
-  inc   ah                             ; close with top right corner
-  call  ansi_cursor_position
-  mov   ecx, top_right_corner_brick
-  mov   edx, top_right_corner_brick.len
-  call  sys_write_stdout
-
-  mov   ecx, horizontal_brick           ; right column
-  call  draw_col_top_to_bottom
-
-  inc   al                              ; close with bottom right corner
-  call  ansi_cursor_position
-  mov   ecx, bottom_right_corner_brick
-  mov   edx, bottom_right_corner_brick.len
-  call  sys_write_stdout
-
-  call  draw_row_right_to_left          ; bottom row
-
-  dec   ah                              ; close with bottom left corner
-  call  ansi_cursor_position
-  mov   ecx, bottom_left_corner_brick
-  mov   edx, bottom_left_corner_brick.len
-  call  sys_write_stdout
-
-  mov   ecx, horizontal_brick           ; left column
-  call  draw_col_bottom_to_top
+  call  draw_row_right_to_left          
 .done:
   ret
 
