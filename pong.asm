@@ -23,7 +23,7 @@ extern sys_write_stdout
 %endif
 
 %define ms        1000000
-%define idle_ms   5
+%define idle_ms   55
 %define ratio     2
 %define width     64 * ratio
 %define height    40
@@ -52,60 +52,64 @@ idle:
   ret
 
 
+section .data
+  hitleft: db "Hit left wall"
+    .len:  equ $-hitleft
+  hitright: db "Hit right wall"
+    .len:  equ $-hitright
+  hittop: db "Hit top wall"
+    .len:  equ $-hittop
+  hitbottom: db "Hit bottom wall"
+    .len:  equ $-hitbottom
+section .text
+
 ; Determines which labels to jmp to next time ball's speed is applied to its position.
 ; Stores the appropriate function pointer in ball_dir.x and ball_dir.y respectively.
 ; This is then used to jmp in @see position_ball.
-section .data
-  hitleft: db "Hit left wall"
-    .len:  equ $- hitleft
-  hitright: db "Hit right wall"
-    .len:  equ $- hitright
-  hittop: db "Hit top wall"
-    .len:  equ $- hittop
-  hitbottom: db "Hit bottom wall"
-    .len:  equ $- hitbottom
-section .text
+; modifies eax, ebx, esi
 adjust_direction:
-  push  eax
-
-  xor   eax, eax          ; load current position
-  mov   ax, [ ball_pos ]
-  log_eax_dec
+  xor   eax, eax                                  ; load current position
+  mov   esi, ball_pos
+  lodsw
+  mov   ebx, eax                                  ; and copy into ebx
 
 .hit_left_wall?:                                  ; if we hit left wall fly to the right
-  cmp   al, left_x
+  cmp   bh, left_x
   jne   .hit_right_wall?
-  mov   dword [ ball_dir.x ], position_ball.right ; hit left
-  log_debug hitleft, hitleft.len
-  ; log_eax_dec
+
+  mov   eax, position_ball.right
+  mov   edi, ball_dir.x
+  stosd
   jmp   .hit_bottom_wall?
 
 .hit_right_wall?:                                 ; if we hit right wall fly to the left
-  cmp   al, right_x
+  cmp   bh, right_x
   jne   .hit_bottom_wall?
-  log_debug hitright, hitright.len
-  ; log_eax_dec
+
+  mov   eax, position_ball.left
+  mov   edi, ball_dir.x
+  stosd
   mov   dword [ ball_dir.x ], position_ball.left  ; hit right
 
 .hit_bottom_wall?:                                ; if we hit bottom wall fly up
-  cmp   ah, bottom_y
+  cmp   bl, bottom_y
   jne   .hit_top_wall?
-  log_debug hitbottom, hitbottom.len
-  ; log_eax_dec
-  mov   dword [ ball_dir.y ], position_ball.up    ; hit bottom
+
+  mov   eax, position_ball.up
+  mov   edi, ball_dir.y
+  stosd
   jmp   .done
 
 .hit_top_wall?:                                   ; if we hit top wall fly down
-  cmp   ah, top_y 
+  cmp   bl, top_y
   jne   .done
-  log_debug hittop, hittop.len
-  ; log_eax_dec
-  mov   dword [ ball_dir.y ], position_ball.down  ; hit top
+
+  mov   eax, position_ball.down
+  mov   edi, ball_dir.y
+  stosd
 
 .done:
-  pop eax
   ret
-
 
 section .data
   positioning: db "Positioning Ball",0
@@ -116,34 +120,36 @@ section .text
 ; which jmp address was stored in ball_dir by adjust_direction.
 ; Thus this simulates the direction of the vector's magnitude in an
 ; unsigned number world.
+; modifies: ebx, esi, edi
 position_ball:
-  push   ebx
-
+  cld
   xor   eax, eax          ; load current position
-  mov   ax, [ ball_pos ]
+  mov   esi, ball_pos
+  lodsw                   ; ball_speed is right after ball_pos in memory, so esi now points at it
 
-  xor   ebx, ebx          ; load current speed
-  mov   bx, [ ball_speed ]
+  mov   ebx, eax          ; load current speed
+  lodsw
+  xchg  eax, ebx
 
   jmp   [ ball_dir.x ]    ; move ball right or left depending on its direction
 .right:
-  add   al, bl
+  add   ah, bh
   jmp   .x_done
 .left:
-  sub   al, bl
+  sub   ah, bh
 
 .x_done:
   jmp   [ ball_dir.y ]    ; move ball up or down depending on its direction
 .down:
-  add   ah, bh
+  add   al, bl
   jmp   .done
 .up:
-  sub   ah, bh
+  sub   al, bl
 
 .done:
-  mov   word [ ball_pos ], ax
+  mov   edi, ball_pos
+  stosw
 
-  pop   ebx
   ret
 
 global _start
@@ -171,13 +177,23 @@ section .text
   call  sys_write_stdout
 %endif
 
+  cld
+  xor  eax, eax
+  mov  edi, ball_pos.y          ; store pos, speed and dir which are after each other in memory
 
-  mov  byte [ ball_pos.x ], left_x + (width / 2)    ; initial ball position
-  mov  byte [ ball_pos.y ], top_y + (height / 2)
-  mov  byte [ ball_speed.x ], 1                     ; initial ball speed
-  mov  byte [ ball_speed.y ], 1
-  mov  dword [ ball_dir.x ], position_ball.right    ; initial ball direction
-  mov  dword [ ball_dir.y ], position_ball.down
+  mov   al, top_y + (height / 2) ; initial ball position
+  stosb
+  mov  al, left_x + (width / 2)
+  stosb
+
+  mov   al, 1                   ; initial ball speed 1 x 1
+  stosb
+  stosb
+
+  mov  eax, position_ball.down ; initial ball direction right x down
+  stosd
+  mov  eax, position_ball.right
+  stosd
 
 game_loop:
   call  adjust_direction
@@ -217,15 +233,13 @@ section .data
 
 
 section .bss
-
-  ball_pos:
-        .x: resb 1
-        .y: resb 1
+  ball_pos:         ; little endian, allow loading into ax in one shot
+        .y: resb 1  ; al
+        .x: resb 1  ; ah
   ball_speed:
-        .x: resb 1
         .y: resb 1
+        .x: resb 1
   ball_dir:         ; addresses of labels to jmp to when applying speed vector to position
-        .x: resd 1  ; position_ball.left or position_ball.right
         .y: resd 1  ; position_ball.up   or position_ball.down
-
+        .x: resd 1  ; position_ball.left or position_ball.right
 section .text
