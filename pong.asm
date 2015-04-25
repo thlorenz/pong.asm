@@ -23,8 +23,8 @@ extern sys_write_stdout
 %endif
 
 %define ms        1000000
-%define idle_ms   50
-%define wall_ms   5
+%define idle_ms   30
+%define wall_ms   1
 %define ratio     2
 %define width     64 * ratio
 %define height    40
@@ -50,6 +50,9 @@ idle:
   ret
 
 
+; draw_walls
+; draws bottom and top row walls
+; it does so with slight delay for that true arcade style ;)
 section .data
   hitleft: db "Hit left wall"
     .len:  equ $-hitleft
@@ -67,7 +70,12 @@ section .data
   horizontal_bottom_brick: db '▀'
     .len                   equ $-horizontal_bottom_brick
 section .text
-draw_row_left_to_right:
+draw_walls:
+  xor   eax, eax
+  mov   ah, left_x - 1                 ; top row
+  mov   al, top_y - 1
+
+.draw_row_left_to_right:
   mov   edx, wall_ms * ms
   call  idle
 
@@ -78,10 +86,12 @@ draw_row_left_to_right:
   call  sys_write_stdout
 
   cmp   ah, right_x
-  jne   draw_row_left_to_right
-  ret
+  jne   .draw_row_left_to_right
 
-draw_row_right_to_left:
+
+  mov   al, bottom_y + 1               ; bottom row
+
+.draw_row_right_to_left:
   mov   edx, wall_ms * ms
   call  idle
 
@@ -92,20 +102,39 @@ draw_row_right_to_left:
   call  sys_write_stdout
 
   cmp   ah, left_x
-  jne   draw_row_right_to_left
+  jne   .draw_row_right_to_left
+
   ret
 
-draw_wall:                              ; draws wall with slight delay for that true arcade style ;)
-  xor   eax, eax
-  mov   ah, left_x - 1                 ; top row 
-  mov   al, top_y - 1
-  call  draw_row_left_to_right         
+; draws left/right paddle around the given center
+; center of paddle in ah:al = x:y
+; modifies: ecx
+section .data
+  paddle_block: db '▓'
+    .len        equ $-paddle_block
+section .text
+draw_left_paddle:
+  xor   eax, eax          ; load current position
+  mov   esi, left_paddle
+  lodsw
+  jmp   draw_paddle
 
-  mov   al, bottom_y + 1               ; bottom row
+draw_right_paddle:
+  xor   eax, eax          ; load current position
+  mov   esi, right_paddle
+  lodsw
 
-  call  draw_row_right_to_left          
-.done:
+draw_paddle:
+  dec   ah                ; start drawing at top of paddle
+  dec   ah
+.loop:
+  mov   ecx, 5            ; paddle is 5 blocks long
+  call  ansi_cursor_position
+  inc   ah
+  loopnz .loop
+
   ret
+
 
 ; Determines which labels to jmp to next time ball's speed is applied to its position.
 ; Stores the appropriate function pointer in ball_dir.x and ball_dir.y respectively.
@@ -211,7 +240,7 @@ _start:
 %ifdef DRAW
   call  ansi_cursor_hide
   call  ansi_term_clear
-  call  draw_wall
+  call  draw_walls
 %else
 section .data
   msg: db "Running in debug mode, please run: 'rm -f pong pong.o && PONG_DRAW=1 make && ./pong', in order to see the ball ;)", 10
@@ -223,22 +252,16 @@ section .text
 %endif
 
   cld
-  xor  eax, eax
-  mov  edi, ball_pos.y          ; store pos, speed and dir which are after each other in memory
-
-  mov   al, top_y + (height / 2) ; initial ball position
-  stosb
-  mov  al, left_x + (width / 2)
-  stosb
-
-  mov   al, 1                   ; initial ball speed 1 x 1
-  stosb
-  stosb
-
-  mov  eax, position_ball.down ; initial ball direction right x down
+  mov   edi, ball_dir             ; initial ball direction right x down
+  mov   eax, position_ball.down
   stosd
-  mov  eax, position_ball.right
+  mov   eax, position_ball.right
   stosd
+
+%ifdef DRAW
+  call  draw_left_paddle
+  call  draw_right_paddle
+%endif
 
 game_loop:
   call  adjust_direction
@@ -260,7 +283,6 @@ game_loop:
   mov   edx, space.len
   call  sys_write_stdout
 
-
 %endif
   jmp   game_loop
 
@@ -276,15 +298,20 @@ section .data
 %endif
   .len  equ $-space
 
-
-
-section .bss
-  ball_pos:         ; little endian, allow loading into ax in one shot
-        .y: resb 1  ; al
-        .x: resb 1  ; ah
+section .data
+  ball_pos:                         ; little endian, allow loading into ax in one shot
+        .y: db top_y + (height / 2) ; al
+        .x: db left_x + (width / 2) ; ah
   ball_speed:
-        .y: resb 1
-        .x: resb 1
+        .y: db 1
+        .x: db 1
+  left_paddle:                      ; paddle positions
+        .y: db top_y + (height / 2) ; al
+        .x: db left_x               ; ah
+  right_paddle:
+        .y: db top_y + (height / 2 ); al
+        .x: db right_x              ; ah
+section .bss
   ball_dir:         ; addresses of labels to jmp to when applying speed vector to position
         .y: resd 1  ; position_ball.up   or position_ball.down
         .x: resd 1  ; position_ball.left or position_ball.right
