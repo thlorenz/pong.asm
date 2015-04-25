@@ -4,7 +4,7 @@
 ; elaborate: http://ascii-table.com/ansi-escape-sequences-vt-100.php
 
 %include "./lib/signals.mac"
-%include "./lib/log.mac"
+;%include "./lib/log.mac"
 
 extern ansi_cursor_hide
 extern ansi_cursor_position
@@ -125,13 +125,18 @@ draw_right_paddle:
   lodsw
 
 draw_paddle:
-  dec   ah                ; start drawing at top of paddle
-  dec   ah
+  mov   edx, paddle_block.len
+  mov   ecx, paddle_block 
+  xor   ebx, ebx
+  mov   bl, al            ; bl marks lower paddle end 
+  add   bl, 3
+  sub   al, 2             ; start drawing at top of paddle
 .loop:
-  mov   ecx, 5            ; paddle is 5 blocks long
   call  ansi_cursor_position
-  inc   ah
-  loopnz .loop
+  call  sys_write_stdout
+  inc   al
+  cmp   bl, al
+  jne   .loop
 
   ret
 
@@ -288,7 +293,7 @@ game_loop:
 
 
 section .data
-  log_text
+;  log_text
   ball: db "•"
   .len  equ $-ball
 %ifenv PONG_TRAIL   ; optionally follow the ball by a trail
@@ -307,10 +312,10 @@ section .data
         .x: db 1
   left_paddle:                      ; paddle positions
         .y: db top_y + (height / 2) ; al
-        .x: db left_x               ; ah
+        .x: db left_x - 1           ; ah
   right_paddle:
         .y: db top_y + (height / 2 ); al
-        .x: db right_x              ; ah
+        .x: db right_x + 1          ; ah
 section .bss
   ball_dir:         ; addresses of labels to jmp to when applying speed vector to position
         .y: resd 1  ; position_ball.up   or position_ball.down
