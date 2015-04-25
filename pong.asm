@@ -22,10 +22,15 @@ extern sys_write_stdout
 %define DRAW
 %endif
 
-%define ms 1000000
-%define ratio 2
-%define width 64 * ratio
-%define height 40
+%define ms        1000000
+%define idle_ms   5
+%define ratio     2
+%define width     64 * ratio
+%define height    40
+%define left_x    5
+%define top_y     5
+%define right_x   left_x + width
+%define bottom_y  top_y + height
 
 section .text
 
@@ -40,7 +45,7 @@ idle:
   push  ecx
   push  edx
   xor   ecx, ecx      ; slow down the loop a bit
-  mov   edx, 40 * ms
+  mov   edx, idle_ms * ms
   call  sys_nanosleep
   pop   edx
   pop   ecx
@@ -62,45 +67,42 @@ section .data
 section .text
 adjust_direction:
   push  eax
-  push  ebx
 
   xor   eax, eax          ; load current position
   mov   ax, [ ball_pos ]
-
-  mov   bx, ax
+  log_eax_dec
 
 .hit_left_wall?:                                  ; if we hit left wall fly to the right
-  cmp   al, 0
+  cmp   al, left_x
   jne   .hit_right_wall?
   mov   dword [ ball_dir.x ], position_ball.right ; hit left
   log_debug hitleft, hitleft.len
-  log_eax_dec
+  ; log_eax_dec
   jmp   .hit_bottom_wall?
 
 .hit_right_wall?:                                 ; if we hit right wall fly to the left
-  cmp   bl, width
+  cmp   al, right_x
   jne   .hit_bottom_wall?
   log_debug hitright, hitright.len
-  log_eax_dec
+  ; log_eax_dec
   mov   dword [ ball_dir.x ], position_ball.left  ; hit right
 
 .hit_bottom_wall?:                                ; if we hit bottom wall fly up
-  cmp   ah, height
+  cmp   ah, bottom_y
   jne   .hit_top_wall?
   log_debug hitbottom, hitbottom.len
-  log_eax_dec
+  ; log_eax_dec
   mov   dword [ ball_dir.y ], position_ball.up    ; hit bottom
   jmp   .done
 
 .hit_top_wall?:                                   ; if we hit top wall fly down
-  cmp   bh, 0
+  cmp   ah, top_y 
   jne   .done
   log_debug hittop, hittop.len
-  log_eax_dec
+  ; log_eax_dec
   mov   dword [ ball_dir.y ], position_ball.down  ; hit top
 
 .done:
-  pop ebx
   pop eax
   ret
 
@@ -116,7 +118,6 @@ section .text
 ; unsigned number world.
 position_ball:
   push   ebx
-  push   ecx
 
   xor   eax, eax          ; load current position
   mov   ax, [ ball_pos ]
@@ -142,7 +143,6 @@ position_ball:
 .done:
   mov   word [ ball_pos ], ax
 
-  pop   ecx
   pop   ebx
   ret
 
@@ -172,8 +172,8 @@ section .text
 %endif
 
 
-  mov  byte [ ball_pos.x ], width / 2               ; initial ball position
-  mov  byte [ ball_pos.y ], height / 2
+  mov  byte [ ball_pos.x ], left_x + (width / 2)    ; initial ball position
+  mov  byte [ ball_pos.y ], top_y + (height / 2)
   mov  byte [ ball_speed.x ], 1                     ; initial ball speed
   mov  byte [ ball_speed.y ], 1
   mov  dword [ ball_dir.x ], position_ball.right    ; initial ball direction
