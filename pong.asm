@@ -23,7 +23,8 @@ extern sys_write_stdout
 %endif
 
 %define ms        1000000
-%define idle_ms   55
+%define idle_ms   50
+%define wall_ms   5
 %define ratio     2
 %define width     64 * ratio
 %define height    40
@@ -43,11 +44,8 @@ exit:
 
 idle:
   push  ecx
-  push  edx
   xor   ecx, ecx      ; slow down the loop a bit
-  mov   edx, idle_ms * ms
   call  sys_nanosleep
-  pop   edx
   pop   ecx
   ret
 
@@ -62,6 +60,115 @@ section .data
   hitbottom: db "Hit bottom wall"
     .len:  equ $-hitbottom
 section .text
+
+section .data
+  top_left_corner_brick     : db '╔'
+    .len                      equ $-top_left_corner_brick
+  top_right_corner_brick    : db '╗'
+    .len                      equ $-top_right_corner_brick
+  bottom_right_corner_brick : db '╝'
+    .len                      equ $-bottom_right_corner_brick
+  bottom_left_corner_brick  : db '╚'
+    .len                      equ $-bottom_left_corner_brick
+  horizontal_brick          : db '═'
+    .len                      equ $-horizontal_brick
+  vertical_brick            : db '║'
+    .len                      equ $-vertical_brick
+section .text
+draw_row_left_to_right:
+  mov   edx, wall_ms * ms
+  call  idle
+
+  inc   ah
+  call  ansi_cursor_position
+  mov   ecx, horizontal_brick
+  mov   edx, horizontal_brick.len
+  call  sys_write_stdout
+
+  cmp   ah, right_x
+  jne   draw_row_left_to_right
+  ret
+
+draw_row_right_to_left:
+  mov   edx, wall_ms * ms
+  call  idle
+
+  dec   ah
+  call  ansi_cursor_position
+  mov   ecx, horizontal_brick
+  mov   edx, horizontal_brick.len
+  call  sys_write_stdout
+
+  cmp   ah, left_x
+  jne   draw_row_right_to_left
+  ret
+
+draw_col_top_to_bottom:
+  mov   edx, wall_ms * ms
+  call  idle
+
+  inc   al
+  call  ansi_cursor_position
+  mov   ecx, vertical_brick
+  mov   edx, vertical_brick.len
+  call  sys_write_stdout
+
+  cmp   al, bottom_y
+  jne   draw_col_top_to_bottom
+  ret
+
+draw_col_bottom_to_top:
+  mov   edx, wall_ms * ms
+  call  idle
+
+  dec   al
+  call  ansi_cursor_position
+  mov   ecx, vertical_brick
+  mov   edx, vertical_brick.len
+  call  sys_write_stdout
+
+  cmp   al, top_y
+  jne   draw_col_bottom_to_top
+  ret
+
+draw_wall:                              ; draws wall with slight delay for that true arcade style ;)
+  xor   eax, eax
+  mov   ah, left_x - 1                  ; start with top left corner
+  mov   al, top_y - 1
+  call  ansi_cursor_position
+  mov   ecx, top_left_corner_brick
+  mov   edx, top_left_corner_brick.len
+  call  sys_write_stdout
+
+  call  draw_row_left_to_right         ; top row
+
+  inc   ah                             ; close with top right corner
+  call  ansi_cursor_position
+  mov   ecx, top_right_corner_brick
+  mov   edx, top_right_corner_brick.len
+  call  sys_write_stdout
+
+  mov   ecx, horizontal_brick           ; right column
+  call  draw_col_top_to_bottom
+
+  inc   al                              ; close with bottom right corner
+  call  ansi_cursor_position
+  mov   ecx, bottom_right_corner_brick
+  mov   edx, bottom_right_corner_brick.len
+  call  sys_write_stdout
+
+  call  draw_row_right_to_left          ; bottom row
+
+  dec   ah                              ; close with bottom left corner
+  call  ansi_cursor_position
+  mov   ecx, bottom_left_corner_brick
+  mov   edx, bottom_left_corner_brick.len
+  call  sys_write_stdout
+
+  mov   ecx, horizontal_brick           ; left column
+  call  draw_col_bottom_to_top
+.done:
+  ret
 
 ; Determines which labels to jmp to next time ball's speed is applied to its position.
 ; Stores the appropriate function pointer in ball_dir.x and ball_dir.y respectively.
@@ -167,6 +274,7 @@ _start:
 %ifdef DRAW
   call  ansi_cursor_hide
   call  ansi_term_clear
+  call  draw_wall
 %else
 section .data
   msg: db "Running in debug mode, please run: 'rm -f pong pong.o && PONG_DRAW=1 make && ./pong', in order to see the ball ;)", 10
@@ -205,6 +313,7 @@ game_loop:
   mov   ecx, ball
   mov   edx, ball.len
   call  sys_write_stdout
+  mov   edx, idle_ms * ms
   call  idle
 
   ; clear ball
