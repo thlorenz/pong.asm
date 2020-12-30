@@ -30,7 +30,7 @@ deps:
 	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_signal.asm           > lib/sys_signal.asm
 	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/sys_write_stdout.asm     > lib/sys_write_stdout.asm
 	curl -L https://raw.githubusercontent.com/thlorenz/lib.asm/master/signals.mac              > lib/signals.mac
-	curl -L curl -L https://raw.githubusercontent.com/thlorenz/log.mac/master/log.mac          > lib/log.mac
+	curl -L https://raw.githubusercontent.com/thlorenz/log.mac/master/log.mac                  > lib/log.mac
 
 gdb: clean $(EXEC)
 	gdb -- $(EXEC)
